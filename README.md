@@ -16,6 +16,8 @@ This package provides consistent figure/table/raw + equation + custom figure.kin
 - `figure-groups` configures several families of `figure(kind: ...)` independently.
 - Each family has its own heading depth, numbering pattern, color, and reset behavior.
 - `figure-number` lets a custom figure renderer place its Ratchet-managed number anywhere in its body.
+- Page settings may be applied either before or after `#show: ratchet` without creating a blank first page.
+- Repeated Ratchet configurations use stable document locations as session identities, avoiding layout convergence warnings.
 - Existing `reset-figure-kinds`, `fig-*`, and `eq-*` configurations remain compatible.
 
 ## Quick start
