@@ -31,9 +31,7 @@
   body
 }
 
-#let _bn-epoch = state("ratchet-epoch", 0)
-
-#let _bn-guard = state("ratchet-guard", 0)
+#let _bn-guard = state("ratchet-guard", none)
 
 #let _bn-cfg = state("ratchet-config", (
   fig-depth: 2,
@@ -174,9 +172,9 @@
     color: fig-color,
   ),) + figure-groups
 
-  // New session from this point onward.
-  let session = _bn-epoch.get() + 1
-  _bn-epoch.update(session)
+  // A wrapper's document location is stable across layout iterations and
+  // uniquely identifies its configuration session.
+  let session = here()
 
   // Anchor (guard + cfg) into the document flow, otherwise the updates can be skipped
   // during iterative layout / introspection passes.
@@ -191,7 +189,6 @@
       eq-outline: eq-outline,
       eq-color: eq-color,
     ))
-    v(0em)
   }
 
   // Only the newest session at the current location should act.

@@ -84,7 +84,6 @@
       }
       counter(math.equation).update(0)
     }
-    v(0em)
   }
 
   show heading.where(level: 1, outlined: true): it => context {
