@@ -1,1 +1,1 @@
-#import "numbering.typ": ratchet
+#import "numbering.typ": figure-number, ratchet

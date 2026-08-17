@@ -1,4 +1,4 @@
-#import "@preview/ratchet:0.0.2": ratchet
+#import "@preview/ratchet:0.0.3": figure-number, ratchet
 
 #show: ratchet.with(
   fig-outline: "1.1",
@@ -18,7 +18,7 @@ This package primarily modifies the numbering of figures and equations to automa
 
 Import this package and enable better numbering with:
 ```typ
-#import "@preview/ratchet:0.0.2": *
+#import "@preview/ratchet:0.0.3": *
 #show: ratchet
 ```
 默认的配置如下：
@@ -27,10 +27,12 @@ the default settings are:
 ```typ
 #show: ratchet.with(
   offset: 0,
+  init: "rebase",
   reset-figure-kinds: (image, table, raw),
   fig-depth: 2,
   fig-outline: "1.1",
   fig-color: none,
+  figure-groups: (),
   eq-depth: 2,
   eq-outline: "(1.1)",
   eq-color: none,
@@ -205,29 +207,39 @@ The `label` and `ref` functionalities also work correctly, allowing you to refer
 
 You can directly re-apply to change the numbering style, for example, to create an *appendix*:
 
-如果你希望加入自定义的编号样式，可以像下面在`reset-figure-kinds`中配置，如`custom-kind`类型的图表：
+如果你希望自定义 figure kind 使用独立的编号深度和样式，可以像下面通过 `figure-groups` 配置：
 
-if you want to add custom numbering styles, you can configure it as below in `reset-figure-kinds`, such as for `custom-kind` type figures:
+Use `figure-groups` when custom figure kinds need an independent numbering depth and style:
+
+每个分组包含四个字段：`kinds` 指定这一组的 figure kind；`depth` 指定编号深度；`outline` 指定编号格式；`color` 指定引用和目录中的编号颜色。同一个 kind 同时出现在多个分组时，最后一个分组优先。
+
+Each group has four fields: `kinds` selects its figure kinds, `depth` controls heading-aware resets, `outline` sets the numbering pattern, and `color` styles numbers in references and outlines. If a kind occurs in multiple groups, the last group wins.
 
 #show: ratchet.with(
   offset: 0,
-  reset-figure-kinds: (image, table, raw, "custom-kind"),
+  reset-figure-kinds: (image, table, raw),
   fig-depth: 3,
-  fig-outline: "I.a.1",
+  fig-outline: "I.1.1",
   fig-color: blue,
+  figure-groups: (
+    (kinds: ("custom-kind",), depth: 2, outline: "A.1", color: purple),
+  ),
   eq-depth: 3,
-  eq-outline: "(I.a.1)",
+  eq-outline: "(I.1.1)",
   eq-color: red,
 )
 ```typ
 #show: ratchet.with(
   offset: 0,
-  reset-figure-kinds: (image, table, raw, "custom-kind"),
+  reset-figure-kinds: (image, table, raw),
   fig-depth: 3,
-  fig-outline: "I.a.1",
+  fig-outline: "I.1.1",
   fig-color: blue,
+  figure-groups: (
+    (kinds: ("custom-kind",), depth: 2, outline: "A.1", color: purple),
+  ),
   eq-depth: 3,
-  eq-outline: "(I.a.1)",
+  eq-outline: "(I.1.1)",
   eq-color: red,
 )
 ```
@@ -289,6 +301,57 @@ Figures with `outlined: false` will be excluded, but those with `numbering: none
 
 Additionally, we can also enable numbering for custom `figure(kind: ...)` types:
 
+`figure-number` 可以把 Ratchet 管理的编号放进自定义渲染内容中。下面的 `custom-card` 没有使用标准 caption，而是在块标题中直接读取 `custom-kind` 的编号：
+
+`figure-number` places a Ratchet-managed number inside a custom renderer. The following `custom-card` does not use a standard caption; it reads the `custom-kind` number directly in the block title:
+
+#let custom-card(lab: none, body) = {
+  let elem = figure(
+    block(
+      fill: purple.lighten(80%),
+      stroke: (left: 4pt + purple),
+      inset: 8pt,
+      width: 100%,
+    )[
+      *Custom card #figure-number("custom-kind")*
+      #linebreak()
+      #body
+    ],
+    kind: "custom-kind",
+    supplement: [CUSTOM CARD],
+    caption: none,
+    outlined: false,
+  )
+  [#elem #if lab != none { label(lab) }]
+}
+
+#custom-card(lab: "custom-card")[This number is rendered inside the card body.]
+
+```typst
+#let custom-card(lab: none, body) = {
+  let elem = figure(
+    block(stroke: (left: 4pt + purple), inset: 8pt, width: 100%)[
+      *Custom card #figure-number("custom-kind")*
+      #linebreak()
+      #body
+    ],
+    kind: "custom-kind",
+    supplement: [CUSTOM CARD],
+    caption: none,
+    outlined: false,
+  )
+  [#elem #if lab != none { label(lab) }]
+}
+
+#custom-card(lab: "custom-card")[This number is rendered inside the card body.]
+```
+
+自定义渲染的块也可以正常引用：`@custom-card:` @custom-card。
+
+The custom-rendered block can be referenced normally: `@custom-card:` @custom-card.
+
+= next section
+
 #figure(
   placeholder-img(),
   caption: [This is a placeholder image],
@@ -308,3 +371,7 @@ Additionally, we can also enable numbering for custom `figure(kind: ...)` types:
 同样也可以引用它：`@custom-fig:`@custom-fig 。
 
 It can also be referenced: `@custom-fig:`@custom-fig .
+
+刚才自定义渲染的块也可以正常引用：`@custom-card:` @custom-card。
+
+The previously custom-rendered block can also be referenced normally: `@custom-card:` @custom-card.

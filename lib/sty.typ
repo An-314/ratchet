@@ -1,20 +1,36 @@
 #import "counter.typ": *
 
+#let _style-figure-groups(groups, body) = {
+  if groups.len() == 0 {
+    body
+  } else {
+    let group = groups.first()
+    let sels = group.kinds.map(k => figure.where(kind: k))
+    if sels.len() > 0 {
+      show selector.or(..sels): set figure(
+        numbering: n => generate-counter(group.depth, n, group.outline),
+      )
+      _style-figure-groups(groups.slice(1), body)
+    } else {
+      _style-figure-groups(groups.slice(1), body)
+    }
+  }
+}
+
 #let styfigure(
   counter-depth: 2,
   fig-outline: "1.1",
   figure-kinds: (image, table, raw),
+  figure-groups: none,
   body,
 ) = {
-  let sels = figure-kinds.map(k => figure.where(kind: k))
-  if sels.len() > 0 {
-    show selector.or(..sels): set figure(
-      numbering: n => generate-counter(counter-depth, n, fig-outline),
-    )
-    body
-  } else {
-    body
-  }
+  let groups = if figure-groups == none { ((
+    kinds: figure-kinds,
+    depth: counter-depth,
+    outline: fig-outline,
+    color: none,
+  ),) } else { figure-groups }
+  _style-figure-groups(groups, body)
 }
 
 #let stymatheq(
@@ -35,11 +51,18 @@
   matheq-depth: 2,
   offset: 0,
   reset-figure-kinds: (image, table, raw),
+  figure-groups: none,
   init: "rebase",
   active: none,
   body,
 ) = {
   let is-active = () => active == none or active()
+  let groups = if figure-groups == none { ((
+    kinds: reset-figure-kinds,
+    depth: counter-depth,
+    outline: "1.1",
+    color: none,
+  ),) } else { figure-groups }
 
   context {
     if is-active() {
@@ -56,7 +79,9 @@
         // "keep": no-op
       }
 
-      for k in reset-figure-kinds { counter(figure.where(kind: k)).update(0) }
+      for group in groups {
+        for k in group.kinds { counter(figure.where(kind: k)).update(0) }
+      }
       counter(math.equation).update(0)
     }
     v(0em)
@@ -65,8 +90,10 @@
   show heading.where(level: 1, outlined: true): it => context {
     if not is-active() { it } else {
       if matheq-depth == 2 or matheq-depth == 3 { counter(math.equation).update(0) }
-      if counter-depth == 2 or counter-depth == 3 {
-        for k in reset-figure-kinds { counter(figure.where(kind: k)).update(0) }
+      for group in groups {
+        if group.depth == 2 or group.depth == 3 {
+          for k in group.kinds { counter(figure.where(kind: k)).update(0) }
+        }
       }
       chap-counter.step(level: 1)
       chap-counter.update((x, ..y) => (x, 0, 0))
@@ -76,8 +103,10 @@
   show heading.where(level: 2, outlined: true): it => context {
     if not is-active() { it } else {
       if matheq-depth == 3 { counter(math.equation).update(0) }
-      if counter-depth == 3 {
-        for k in reset-figure-kinds { counter(figure.where(kind: k)).update(0) }
+      for group in groups {
+        if group.depth == 3 {
+          for k in group.kinds { counter(figure.where(kind: k)).update(0) }
+        }
       }
       chap-counter.step(level: 2)
       chap-counter.update((x, y, ..z) => (x, y, 0))
