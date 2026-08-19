@@ -69,12 +69,21 @@
       if init == "reset" {
         chap-counter.update((..) => (offset, 0, 0))
       } else if init == "rebase" {
-        let h = counter(heading).get()
-        chap-counter.update((..) => (
-          h.at(0, default: 0) + offset,
-          h.at(1, default: 0),
-          h.at(2, default: 0),
-        ))
+        // A second show-rule installation creates a fresh native heading-counter
+        // scope, so counter(heading).get() incorrectly reports zero here.
+        // Reconstruct the same backbone Ratchet manages from preceding headings.
+        let nums = (offset, 0, 0)
+        let previous = query(selector(heading.where(outlined: true)).before(here()))
+        for item in previous {
+          if item.level == 1 {
+            nums = (nums.at(0) + 1, 0, 0)
+          } else if item.level == 2 {
+            nums = (nums.at(0), nums.at(1) + 1, 0)
+          } else if item.level == 3 {
+            nums = (nums.at(0), nums.at(1), nums.at(2) + 1)
+          }
+        }
+        chap-counter.update((..) => nums)
       } else {
         // "keep": no-op
       }

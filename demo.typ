@@ -1,4 +1,4 @@
-#import "@preview/ratchet:0.0.3": figure-number, ratchet
+#import "@preview/ratchet:0.0.4": figure-number, ratchet
 
 #show: ratchet.with(
   fig-outline: "1.1",
@@ -18,7 +18,7 @@ This package primarily modifies the numbering of figures and equations to automa
 
 Import this package and enable better numbering with:
 ```typ
-#import "@preview/ratchet:0.0.3": *
+#import "@preview/ratchet:0.0.4": *
 #show: ratchet
 ```
 默认的配置如下：

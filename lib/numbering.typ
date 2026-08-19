@@ -4,8 +4,83 @@
 #let _last(arr) = arr.at(arr.len() - 1)
 #let _last-int(x) = if type(x) == int { x } else { _last(x) }
 
-#let _figure-config(groups, kind, fallback) = {
-  let config = fallback
+#let _validate-depth(name, value) = {
+  if type(value) != int or not (value in (1, 2, 3)) {
+    panic("ratchet: " + name + " must be 1, 2, or 3")
+  }
+}
+
+#let _validate-outline(name, value) = {
+  if not (type(value) in (str, function)) {
+    panic("ratchet: " + name + " must be a string or function")
+  }
+}
+
+#let _validate-color(name, value) = {
+  if value != none and type(value) != color {
+    panic("ratchet: " + name + " must be a color or none")
+  }
+}
+
+#let _validate-kinds(name, value) = {
+  if type(value) != array {
+    panic("ratchet: " + name + " must be an array")
+  }
+  for kind in value {
+    if not (type(kind) in (str, function)) {
+      panic("ratchet: each item in " + name + " must be a string or element function")
+    }
+  }
+}
+
+#let _validate-config(
+  offset,
+  init,
+  reset-figure-kinds,
+  fig-depth,
+  fig-outline,
+  fig-color,
+  figure-groups,
+  eq-depth,
+  eq-outline,
+  eq-color,
+) = {
+  if type(offset) != int {
+    panic("ratchet: offset must be an integer")
+  }
+  if not (init in ("reset", "rebase", "keep")) {
+    panic("ratchet: init must be \"reset\", \"rebase\", or \"keep\"")
+  }
+  _validate-kinds("reset-figure-kinds", reset-figure-kinds)
+  _validate-depth("fig-depth", fig-depth)
+  _validate-outline("fig-outline", fig-outline)
+  _validate-color("fig-color", fig-color)
+  _validate-depth("eq-depth", eq-depth)
+  _validate-outline("eq-outline", eq-outline)
+  _validate-color("eq-color", eq-color)
+
+  if type(figure-groups) != array {
+    panic("ratchet: figure-groups must be an array")
+  }
+  for (index, group) in figure-groups.enumerate() {
+    let name = "figure-groups[" + str(index) + "]"
+    if type(group) != dictionary {
+      panic("ratchet: " + name + " must be a dictionary")
+    }
+    for field in ("kinds", "depth", "outline", "color") {
+      if not group.keys().contains(field) {
+        panic("ratchet: " + name + " is missing the \"" + field + "\" field")
+      }
+    }
+    _validate-kinds(name + ".kinds", group.kinds)
+    _validate-depth(name + ".depth", group.depth)
+    _validate-outline(name + ".outline", group.outline)
+    _validate-color(name + ".color", group.color)
+  }
+}
+
+#let _figure-config(groups, kind) = {
+  let config = none
   for group in groups {
     if group.kinds.contains(kind) { config = group }
   }
@@ -49,17 +124,20 @@
 #let figure-number(kind, loc: none) = context {
   let loc = if loc == none { here() } else { loc }
   let cfg = _bn-cfg.at(loc)
-  let fig = _figure-config(cfg.figure-groups, kind, (
-    depth: cfg.fig-depth,
-    outline: cfg.fig-outline,
-    color: cfg.fig-color,
-  ))
+  let fig = _figure-config(cfg.figure-groups, kind)
+  if fig == none {
+    panic("ratchet: figure-number received a kind that Ratchet does not manage")
+  }
   let n = _last-int(counter(figure.where(kind: kind)).at(loc))
   generate-counter(fig.depth, n, fig.outline, loc: loc)
 }
 
 #let _resolve-supplement(r, el) = {
-  if r.supplement == none or r.supplement == auto { [#el.supplement] } else if type(r.supplement) == function {
+  if r.supplement == auto {
+    [#el.supplement]
+  } else if r.supplement == none {
+    []
+  } else if type(r.supplement) == function {
     r.supplement(el)
   } else { r.supplement }
 }
@@ -71,6 +149,7 @@
   show ref: r => context {
     let el = r.element
     if el == none { return r }
+    if r.form != "normal" { return r }
 
     if el.has("numbering") and el.numbering == none { return r }
 
@@ -80,15 +159,15 @@
     if el.func() == math.equation {
       let n = _last-int(counter(math.equation).at(loc))
       let num = generate-counter(cfg.eq-depth, n, cfg.eq-outline, loc: loc)
-      return link(loc, _paint(num, cfg.eq-color))
+      let sup = _resolve-supplement(r, el)
+      return link(loc, if sup == [] { _paint(num, cfg.eq-color) } else {
+        _paintc([#sup #h(0.15em) #num], cfg.eq-color)
+      })
     }
 
     if el.func() == figure {
-      let fig = _figure-config(cfg.figure-groups, el.kind, (
-        depth: cfg.fig-depth,
-        outline: cfg.fig-outline,
-        color: cfg.fig-color,
-      ))
+      let fig = _figure-config(cfg.figure-groups, el.kind)
+      if fig == none { return r }
       let n = _last-int(counter(figure.where(kind: el.kind)).at(loc))
       let num = generate-counter(fig.depth, n, fig.outline, loc: loc)
       let sup = _resolve-supplement(r, el)
@@ -108,7 +187,7 @@
     let el = it.element
     if el == none {
       // fallback: keep default behavior
-      return link(it.element.location(), it.indented(it.prefix(), it.inner()))
+      return it
     }
     let loc = el.location()
     // If the element explicitly disabled numbering, keep default prefix.
@@ -120,17 +199,14 @@
     // Fix equations inside outlines (equation list).
     if el.func() == math.equation {
       let n = _last-int(counter(math.equation).at(loc))
-      let num = generate-counter(cfg.eq-depth, n, outline: cfg.eq-outline, loc: loc)
+      let num = generate-counter(cfg.eq-depth, n, cfg.eq-outline, loc: loc)
       let prefix = _paint(num, cfg.eq-color)
       return link(loc, it.indented(prefix, it.inner()))
     }
     // Fix figures inside outlines (list of figures / tables).
     if el.func() == figure {
-      let fig = _figure-config(cfg.figure-groups, el.kind, (
-        depth: cfg.fig-depth,
-        outline: cfg.fig-outline,
-        color: cfg.fig-color,
-      ))
+      let fig = _figure-config(cfg.figure-groups, el.kind)
+      if fig == none { return it }
       let n = _last-int(counter(figure.where(kind: el.kind)).at(loc))
       let num = generate-counter(fig.depth, n, fig.outline, loc: loc)
       // Mimic outline.entry.prefix(): add supplement for figures.
@@ -165,6 +241,19 @@
   eq-color: none,
   body,
 ) = context {
+  _validate-config(
+    offset,
+    init,
+    reset-figure-kinds,
+    fig-depth,
+    fig-outline,
+    fig-color,
+    figure-groups,
+    eq-depth,
+    eq-outline,
+    eq-color,
+  )
+
   let all-figure-groups = ((
     kinds: reset-figure-kinds,
     depth: fig-depth,

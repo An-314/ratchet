@@ -10,11 +10,14 @@
 #let generate-counter(counter-depth, it, outline, loc: none) = context {
   let loc = if loc == none { here() } else { loc }
   let s = int(it)
+  if not (counter-depth in (1, 2, 3)) {
+    panic("ratchet: counter depth must be 1, 2, or 3")
+  }
   if counter-depth == 3 {
     extract-heading(2, outline, s, loc: loc)
   } else if counter-depth == 2 {
     extract-heading(1, outline, s, loc: loc)
   } else {
-    s
+    numbering(outline, s)
   }
 }

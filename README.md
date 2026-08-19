@@ -11,6 +11,17 @@ This package provides consistent figure/table/raw + equation + custom figure.kin
 - correct cross-chapter references,
 - and safe “re-installation” (you can apply the package multiple times in one document with different styles).
 
+## What's new in 0.0.4
+
+- Depth `1` now applies its configured outline instead of returning a bare integer.
+- The default equation outline `"(1.1)"` therefore produces `(1)`, `(2)`, ... at depth `1`.
+- Displayed numbers, references, and outline entries remain consistent at every supported depth.
+- Equation outlines now compile correctly and use the configured equation pattern.
+- Explicit reference supplements, omitted supplements, and page references now preserve native Typst semantics.
+- Figure kinds outside `reset-figure-kinds` and `figure-groups` now retain native numbering in displays, references, and outlines.
+- Reapplying Ratchet with `init: "rebase"` now preserves the current heading backbone.
+- Invalid configuration now fails early with a field-specific error message.
+
 ## What's new in 0.0.3
 
 - `figure-groups` configures several families of `figure(kind: ...)` independently.
@@ -23,7 +34,7 @@ This package provides consistent figure/table/raw + equation + custom figure.kin
 ## Quick start
 
 ```typst
-#import "@preview/ratchet:0.0.3": *
+#import "@preview/ratchet:0.0.4": *
 
 #show: ratchet.with(
   fig-depth: 2,
@@ -90,10 +101,10 @@ If a kind appears in more than one group, the last matching group wins. Addition
 
 ### 3) Custom renderers with `figure-number`
 
-`figure-number(kind, loc: none)` returns the number configured for `kind` at the current figure location. Call it inside the body of a matching figure:
+`figure-number(kind, loc: none)` returns the number configured for `kind` at the current figure location. The kind must be listed in `reset-figure-kinds` or `figure-groups`. Call it inside the body of a matching figure:
 
 ```typst
-#import "@preview/ratchet:0.0.3": figure-number, ratchet
+#import "@preview/ratchet:0.0.4": figure-number, ratchet
 
 #show: ratchet.with(
   figure-groups: (
@@ -173,12 +184,16 @@ Typst’s `outline` lists *outlined* elements.
 
 Other helper functions live in the internal modules.
 
+## Migrating from 0.0.3
+
+No API changes are required. Update the import version to `0.0.4`. Documents using depth `1` will now honor their configured outline, so the default equation outline displays `(1)` instead of a bare `1`. Explicit, omitted, and page-reference supplements now behave like native Typst references, and repeated Ratchet configurations no longer lose the current heading position when rebasing.
+
 ## Migrating from 0.0.2
 
 No change is required for existing base figure and equation configurations. Update the import version, then use `figure-groups` only for custom kinds that need settings independent from `fig-*`:
 
 ```typst
-#import "@preview/ratchet:0.0.3": ratchet
+#import "@preview/ratchet:0.0.4": ratchet
 ```
 
 Custom packages that previously maintained their own counters can migrate to native `figure(kind: ...)` counters and use `figure-number` for their rendered titles. Ratchet will then manage resets and cross-references directly.
